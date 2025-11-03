@@ -32,25 +32,22 @@ public class ConfigManager {
                     else Files.writeString(configFile, """
                         settings:
                           kick-message: "<red>You are not whitelisted on this proxy.</red>"
+                          enabled: true
                         whitelist: []
                         """);
                 }
             }
             loader = YamlConfigurationLoader.builder().path(configFile).build();
             root = loader.load();
-            if (root.node("settings", "kick-message").virtual()) {
+            if (root.node("settings", "kick-message").virtual())
                 root.node("settings", "kick-message").raw("<red>You are not whitelisted on this proxy.</red>");
-            }
-            if (root.node("whitelist").virtual()) {
+            if (root.node("settings", "enabled").virtual())
+                root.node("settings", "enabled").raw(true);
+            if (root.node("whitelist").virtual())
                 root.node("whitelist").raw(new ArrayList<String>());
-            }
-            logShape();
             logger.info("[AQUA-WHITELIST] Config loaded from {}", configFile.toAbsolutePath());
         } catch (IOException e) {
             logger.error("Failed to load config", e);
-            setDefaults();
-        } catch (Exception e) {
-            logger.error("Unexpected config error; using defaults", e);
             setDefaults();
         }
     }
@@ -58,27 +55,8 @@ public class ConfigManager {
     private void setDefaults() {
         root = CommentedConfigurationNode.root();
         root.node("settings", "kick-message").raw("<red>You are not whitelisted on this proxy.</red>");
+        root.node("settings", "enabled").raw(true);
         root.node("whitelist").raw(new ArrayList<String>());
-    }
-
-    private void logShape() {
-        var n = root.node("whitelist");
-        String shape = n.isList() ? "list" : n.isMap() ? "map" : "scalar";
-        logger.info("[AQUA-WHITELIST] whitelist node shape: {}", shape);
-        if (n.isList()) {
-            List<String> vals = new ArrayList<>();
-            for (var c : n.childrenList()) {
-                String v = c.getString("");
-                if (!v.isBlank()) vals.add(v);
-            }
-            logger.info("[AQUA-WHITELIST] whitelist values: {}", vals);
-        } else if (n.isMap()) {
-            Set<String> keys = new LinkedHashSet<>();
-            for (var k : n.childrenMap().keySet()) keys.add(String.valueOf(k));
-            logger.info("[AQUA-WHITELIST] whitelist map-keys: {}", keys);
-        } else {
-            logger.info("[AQUA-WHITELIST] whitelist scalar: {}", n.getString(""));
-        }
     }
 
     public synchronized void save() {
@@ -87,6 +65,15 @@ public class ConfigManager {
         } catch (IOException e) {
             logger.error("Failed to save config", e);
         }
+    }
+
+    public synchronized boolean isWhitelistEnabled() {
+        return root.node("settings", "enabled").getBoolean(true);
+    }
+
+    public synchronized void setWhitelistEnabled(boolean enabled) {
+        root.node("settings", "enabled").raw(enabled);
+        save();
     }
 
     public synchronized String getKickMessageRaw() {
@@ -107,24 +94,22 @@ public class ConfigManager {
                     String v = child.getString("");
                     if (!v.isBlank()) out.add(v.trim());
                 }
-                return out;
-            }
-            if (node.isMap()) {
+            } else if (node.isMap()) {
                 for (var key : node.childrenMap().keySet()) {
                     String v = String.valueOf(key);
                     if (!v.isBlank()) out.add(v.trim());
                 }
-                return out;
-            }
-            String scalar = node.getString("");
-            if (!scalar.isBlank()) {
-                for (String part : scalar.split("[,\\s]+")) {
-                    String s = part.trim();
-                    if (!s.isEmpty()) out.add(s);
+            } else {
+                String scalar = node.getString("");
+                if (!scalar.isBlank()) {
+                    for (String part : scalar.split("[,\\s]+")) {
+                        String s = part.trim();
+                        if (!s.isEmpty()) out.add(s);
+                    }
                 }
             }
         } catch (Exception e) {
-            logger.warn("[AQUA-WHITELIST] Failed to read whitelist; treating as empty", e);
+            logger.warn("Failed to read whitelist; returning empty list", e);
         }
         return out;
     }

@@ -26,22 +26,39 @@ public class WhitelistCommand implements SimpleCommand {
     public void execute(Invocation in) {
         try {
             String[] args = in.arguments();
-            if (args.length < 2) {
+            if (args.length == 0) {
                 sendUsage(in);
                 return;
             }
             String sub = args[0].toLowerCase();
-            String name = args[1];
             switch (sub) {
                 case "add" -> {
+                    if (args.length < 2) {
+                        sendUsage(in);
+                        return;
+                    }
+                    String name = args[1];
                     boolean added = config.add(name);
                     if (added) in.source().sendMessage(MM.deserialize("<green>Added <white>" + name + " <green>to the whitelist."));
                     else in.source().sendMessage(MM.deserialize("<yellow>" + name + " is already whitelisted."));
                 }
                 case "remove", "del", "rm" -> {
+                    if (args.length < 2) {
+                        sendUsage(in);
+                        return;
+                    }
+                    String name = args[1];
                     boolean removed = config.remove(name);
                     if (removed) in.source().sendMessage(MM.deserialize("<red>Removed <white>" + name + " <red>from the whitelist."));
                     else in.source().sendMessage(MM.deserialize("<yellow>" + name + " was not on the whitelist."));
+                }
+                case "enable" -> {
+                    config.setWhitelistEnabled(true);
+                    in.source().sendMessage(MM.deserialize("<green>Whitelist enabled."));
+                }
+                case "disable" -> {
+                    config.setWhitelistEnabled(false);
+                    in.source().sendMessage(MM.deserialize("<red>Whitelist disabled."));
                 }
                 default -> sendUsage(in);
             }
@@ -54,7 +71,7 @@ public class WhitelistCommand implements SimpleCommand {
     @Override
     public List<String> suggest(Invocation in) {
         String[] a = in.arguments();
-        if (a.length == 1) return List.of("add", "remove");
+        if (a.length == 1) return List.of("add", "remove", "enable", "disable");
         if (a.length == 2 && a[0].equalsIgnoreCase("remove")) return config.getWhitelist();
         return List.of();
     }
@@ -64,6 +81,8 @@ public class WhitelistCommand implements SimpleCommand {
             <aqua>AquaWhitelist</aqua>
             <white>/aw add <player></white>
             <white>/aw remove <player></white>
+            <white>/aw enable</white>
+            <white>/aw disable</white>
             """);
         in.source().sendMessage(msg);
     }

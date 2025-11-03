@@ -9,10 +9,8 @@ import com.velocitypowered.api.plugin.annotation.DataDirectory;
 import com.velocitypowered.api.proxy.ProxyServer;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.slf4j.Logger;
-import org.spongepowered.configurate.serialize.SerializationException;
 import studio.aquacoding.aquawhitelist.commands.WhitelistCommand;
 import studio.aquacoding.aquawhitelist.utils.ConfigManager;
-
 import java.nio.file.Path;
 
 @Plugin(
@@ -20,6 +18,7 @@ import java.nio.file.Path;
         name = "AquaWhitelist",
         version = BuildConstants.VERSION,
         description = "Whitelist Plugin for Velocity",
+        url = "https://blackdev.xyz",
         authors = {"BlackDev"}
 )
 public class AquaWhitelist {
@@ -37,7 +36,7 @@ public class AquaWhitelist {
     }
 
     @Subscribe
-    public void onProxyInitialization(ProxyInitializeEvent e) throws SerializationException {
+    public void onProxyInitialization(ProxyInitializeEvent e) {
         config = new ConfigManager(dataDirectory, logger);
         config.load();
         var meta = server.getCommandManager().metaBuilder("aquawhitelist").aliases("aw").build();
@@ -48,6 +47,7 @@ public class AquaWhitelist {
     @Subscribe
     public void onLogin(LoginEvent event) {
         try {
+            if (!config.isWhitelistEnabled()) return;
             String name = event.getPlayer().getUsername();
             if (!config.isWhitelisted(name)) {
                 event.setResult(LoginEvent.ComponentResult.denied(MM.deserialize(config.getKickMessageRaw())));
