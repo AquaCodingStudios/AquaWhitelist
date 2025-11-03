@@ -20,7 +20,6 @@ import java.nio.file.Path;
         name = "AquaWhitelist",
         version = BuildConstants.VERSION,
         description = "Whitelist Plugin for Velocity",
-        url = "https://blackdev.xyz",
         authors = {"BlackDev"}
 )
 public class AquaWhitelist {
