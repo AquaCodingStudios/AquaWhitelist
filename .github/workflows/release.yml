@@ -1,0 +1,62 @@
+name: Release on tag
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@v3
+
+      - name: Build (assemble + shadow if present)
+        run: |
+          chmod +x ./gradlew
+          ./gradlew --no-daemon clean build shadowJar || ./gradlew --no-daemon clean build
+
+      - name: Collect artifacts
+        id: collect
+        run: |
+          mkdir -p artifacts
+          # Adjust the patterns below to your project output
+          shopt -s nullglob
+          for f in build/libs/*-all.jar build/libs/*-shadow.jar build/libs/*.jar ; do
+            cp "$f" artifacts/
+          done
+          echo "count=$(ls -1 artifacts | wc -l)" >> "$GITHUB_OUTPUT"
+
+      - name: Upload build artifacts (workflow run)
+        if: steps.collect.outputs.count != '0'
+        uses: actions/upload-artifact@v4
+        with:
+          name: jars-${{ github.ref_name }}
+          path: artifacts/*
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          generate_release_notes: true
+          files: artifacts/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
